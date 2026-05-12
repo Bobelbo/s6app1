@@ -19,20 +19,14 @@ void setup()
 
 void loop()
 {
-    if (Serial2.available())
-    {
-        String line = Serial2.readStringUntil('\n');
-        Serial.print("Received: ");
-        Serial.println(line);
-    }
-
-    delay(5000);
-
     if (!connected)
     {
-        BLEDevice::getScan()->start(0);
+        Serial.println("Scanning for BLE servers...");
+        BLEDevice::getScan()->start(3);
+        Serial.println("Scan complete");
         pClient = BLEDevice::createClient();
-        if (pClient->connect(BLEAddress("Station météo ESP32 - :)")))
+        Serial.println("Connecting to server...");
+        if (pClient->connect(BLEAddress("c0:49:ef:4b:20:ce")))
         {
             Serial.println("Connected to server");
             connected = true;
@@ -53,5 +47,14 @@ void loop()
                 pRemoteChar->writeValue(value);
             }
         }
+    }
+
+    delay(5000);
+
+    if (Serial2.available())
+    {
+        String line = Serial2.readStringUntil('\n');
+        Serial.print("Received: ");
+        Serial.println(line);
     }
 }
