@@ -39,6 +39,9 @@ float calculatedLux()
   return 0.005 * pow(sensorValue, 1.32);
 }
 
+#define RX_PIN 4
+#define TX_PIN 5
+
 Adafruit_DPS310 dps;
 Adafruit_Sensor *dps_temp = dps.getTemperatureSensor();
 Adafruit_Sensor *dps_pressure = dps.getPressureSensor();
@@ -53,7 +56,6 @@ typedef struct Sensor
   float (*getValue)();
 } Sensor;
 
-
 Sensor sensors[NB_SENSORS];
 float currentData[NB_SENSORS] = {0, 0, 0, 0, 0, 0, 0};
 bool sendData = false;
@@ -63,9 +65,10 @@ void setup()
 {
   Serial.begin(9600);
 
+  Serial1.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+
   BLEDevice::init("Station météo ESP32 - :)");
   BLEServer *pServer = BLEDevice::createServer();
-  pServer->removeService(pServer->getServiceByUUID(SERVICE_UUID));
 
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
@@ -135,8 +138,6 @@ void loop()
     Serial.print(value, 1);
     char bleValue[8] = {0};
     sensors[i].characteristic->setValue(value);
-    Serial.print("BLE value: ");
-    Serial.println(bleValue);
 
     currentData[i] = value;
     dirty = true;
@@ -148,6 +149,15 @@ void loop()
   if (sendData)
   {
     // Send data via UART
+    char out[128];
+    int pos = snprintf(out, sizeof(out), "%lu", millis());
+    for (int i = 0; i < NB_SENSORS; ++i)
+    {
+      pos += snprintf(out + pos, sizeof(out) - pos, ",%.2f", currentData[i]);
+      if (pos >= (int)sizeof(out) - 16) break;
+    }
+    snprintf(out + pos, sizeof(out) - pos, "\n");
+    Serial1.print(out);
 
     dirty = false;
     sendData = false;
